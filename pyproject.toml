@@ -36,6 +36,9 @@ dependencies = [
 redis = ["redis>=5.0"]
 dotenv = ["python-dotenv>=1.0"]
 
+[project.scripts]
+bling-auth = "bling_api_v3_auth.cli:main"
+
 [project.urls]
 Homepage = "https://github.com/tempont/bling_api_v3_auth"
 Documentation = "https://github.com/tempont/bling_api_v3_auth#readme"
