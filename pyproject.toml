@@ -1,0 +1,117 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bling-api-v3-auth"
+dynamic = ["version"]
+description = "Lightweight OAuth 2.0 (JWT) authentication for the Bling ERP API v3"
+readme = "README.md"
+license = "Unlicense"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+authors = [{ name = "tempont" }]
+keywords = ["bling", "erp", "oauth2", "jwt", "authentication", "api", "requests"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Natural Language :: Portuguese (Brazilian)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "requests>=2.32.3",
+]
+
+[project.optional-dependencies]
+redis = ["redis>=5.0"]
+dotenv = ["python-dotenv>=1.0"]
+
+[project.urls]
+Homepage = "https://github.com/tempont/bling_api_v3_auth"
+Documentation = "https://github.com/tempont/bling_api_v3_auth#readme"
+Repository = "https://github.com/tempont/bling_api_v3_auth"
+Issues = "https://github.com/tempont/bling_api_v3_auth/issues"
+Changelog = "https://github.com/tempont/bling_api_v3_auth/blob/main/CHANGELOG.md"
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.29",
+    "fakeredis[lua]>=2.26",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "python-dotenv>=1.0",
+    "redis>=5.0",
+    "responses>=0.25",
+    "ruff>=0.11",
+    "types-requests>=2.32",
+]
+
+[tool.hatch.version]
+path = "src/bling_api_v3_auth/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bling_api_v3_auth"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/examples",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/LICENSE",
+    "/.env.example",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-markers"]
+
+[tool.coverage.run]
+source = ["bling_api_v3_auth"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = ["if TYPE_CHECKING:", "raise NotImplementedError"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F", "I", "B", "UP", "S", "SIM", "RUF", "N", "PT", "RET", "ANN", "D", "TC", "PL",
+]
+ignore = [
+    "D105",    # magic methods are self-explanatory
+    "D107",    # __init__ documented on the class
+    "PLR0913", # explicit keyword-only configuration is intended
+    "ANN401",  # Any is used for untyped JSON payloads and optional redis clients
+    "S105",    # token_type="Bearer"/URLs are flagged as passwords (false positives)
+    "S106",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S105", "S106", "ANN", "D", "PLR2004"]
+"examples/**" = ["D", "T201", "S", "INP001"]
+"src/bling_api_v3_auth/cli.py" = ["T201"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.basedpyright]
+pythonVersion = "3.10"
+include = ["src", "tests"]
+typeCheckingMode = "standard"

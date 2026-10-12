@@ -1,10 +1,24 @@
+# Secrets / local tokens
 .env
-/env
-./venv
-/venv
 credential/
 credentials.json
 
-# Byte-compiled / optimized / DLL files
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python / build artifacts
 __pycache__/
 *.py[cod]
+build/
+dist/
+*.egg-info/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.codegraph/
