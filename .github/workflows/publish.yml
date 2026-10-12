@@ -1,0 +1,90 @@
+# Publishes to PyPI with Trusted Publishing (OIDC) - no API token stored in GitHub.
+#
+# One-time setup:
+#   1. PyPI > Your account > Publishing > "Add a new pending publisher":
+#        project: bling-api-v3-auth | owner: tempont | repo: bling_api_v3_auth
+#        workflow: publish.yml      | environment: pypi
+#      (repeat on test.pypi.org with environment: testpypi, optional)
+#   2. GitHub > Settings > Environments: create "pypi" (and "testpypi").
+#
+# Release: bump src/bling_api_v3_auth/_version.py, update CHANGELOG.md, merge, then
+# create a GitHub Release with tag vX.Y.Z (must match the package version).
+name: Publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Repository to publish to"
+        type: choice
+        options: [testpypi]
+        default: testpypi
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Build distributions
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          python-version: "3.12"
+      - name: Check that the release tag matches the package version
+        if: github.event_name == 'release'
+        run: |
+          version="$(uv run --no-project python -c "import re,pathlib; print(re.search(r'__version__ = \"(.+?)\"', pathlib.Path('src/bling_api_v3_auth/_version.py').read_text()).group(1))")"
+          tag="${GITHUB_REF_NAME#v}"
+          echo "package: $version | tag: $tag"
+          test "$version" = "$tag"
+      - run: uv build
+      - run: uvx twine check --strict dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish-pypi:
+    name: Publish to PyPI
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/bling-api-v3-auth/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/project/bling-api-v3-auth/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
