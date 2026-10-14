@@ -99,13 +99,8 @@ class JsonTokenStorage(TokenStorage):
             return None
         try:
             data: Any = json.loads(raw)
-        try:
-            data: Any = json.loads(raw)
         except json.JSONDecodeError as exc:
-            msg = (
-                f"Invalid token JSON in Redis key {self.key!r}. "
-                "Authorize again with: bling-auth login"
-            )
+            msg = f"Invalid token JSON in {self.path}. Authorize again with: bling-auth login"
             raise AuthorizationRequiredError(msg) from exc
         if not isinstance(data, dict):
             return None
