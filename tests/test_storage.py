@@ -7,6 +7,7 @@ import time
 import fakeredis
 import pytest
 
+from bling_api_v3_auth.exceptions import AuthorizationRequiredError, BlingConfigError
 from bling_api_v3_auth.models import TokenData
 from bling_api_v3_auth.storage import JsonTokenStorage, MemoryTokenStorage, RedisTokenStorage
 
@@ -74,6 +75,24 @@ def test_json_storage_empty_file(tmp_path):
     path = tmp_path / "credentials.json"
     path.write_text("")
     assert JsonTokenStorage(path).load() is None
+
+
+def test_json_storage_corrupt_file_requires_authorization(tmp_path):
+    path = tmp_path / "credentials.json"
+    raw = '{"access_token": "private-access", "refresh_token":'
+    path.write_text(raw)
+    with pytest.raises(AuthorizationRequiredError, match="bling-auth login") as error:
+        JsonTokenStorage(path).load()
+    assert isinstance(error.value.__cause__, json.JSONDecodeError)
+    assert str(path) in str(error.value)
+    assert "private-access" not in str(error.value)
+    assert path.read_text() == raw
+
+
+def test_redis_storage_missing_extra_is_config_error(monkeypatch):
+    monkeypatch.setitem(sys.modules, "redis", None)
+    with pytest.raises(BlingConfigError, match=r"bling-api-v3-auth\[redis\]"):
+        RedisTokenStorage()
 
 
 def test_redis_storage(token):

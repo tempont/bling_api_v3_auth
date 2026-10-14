@@ -1,4 +1,5 @@
 import json
+import sys
 
 import pytest
 
@@ -72,3 +73,55 @@ def test_missing_credentials_is_reported(monkeypatch, tmp_path, capsys):
 
 def test_status_without_tokens(env):
     assert main(["status"]) == 1
+
+
+@pytest.mark.parametrize("command", ["status", "token"])
+@pytest.mark.parametrize(
+    "redis_env",
+    [{}, {"BLING_REDIS_URL": "redis://localhost:6379/0"}, {"REDIS_HOST_IP": "localhost"}],
+    ids=["default-url", "explicit-url", "legacy-host"],
+)
+def test_missing_redis_extra_is_reported(env, monkeypatch, capsys, command, redis_env):
+    monkeypatch.setenv("BLING_TOKEN_STORAGE", "redis")
+    for name in ("BLING_REDIS_URL", "REDIS_HOST_IP"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in redis_env.items():
+        monkeypatch.setenv(name, value)
+    monkeypatch.setitem(sys.modules, "redis", None)
+
+    assert main([command]) == 1
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert output.err.startswith("error: ")
+    assert "pip install 'bling-api-v3-auth[redis]'" in output.err
+    assert "Traceback" not in output.err
+
+
+@pytest.mark.parametrize("command", ["status", "token"])
+def test_corrupt_credentials_are_reported(env, monkeypatch, mocked, capsys, command):
+    monkeypatch.setenv("BLING_TOKEN_STORAGE", "json")
+    path = env / "creds.json"
+    raw = '{"access_token": "private-access", "refresh_token":'
+    path.write_text(raw)
+
+    assert main([command]) == 1
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert output.err.startswith("error: ")
+    assert str(path) in output.err
+    assert "bling-auth login" in output.err
+    assert "Traceback" not in output.err
+    assert "private-access" not in output.err
+    assert path.read_text() == raw
+    assert len(mocked.calls) == 0
+
+
+def test_authorize_replaces_corrupt_credentials(env, monkeypatch, mocked):
+    monkeypatch.setenv("BLING_TOKEN_STORAGE", "json")
+    path = env / "creds.json"
+    path.write_text('{"refresh_token":')
+    add_token_response(mocked)
+
+    assert main(["authorize", "abc"]) == 0
+    assert json.loads(path.read_text())["access_token"] == JWT_ACCESS
+    assert main(["status"]) == 0

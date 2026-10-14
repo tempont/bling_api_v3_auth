@@ -1,3 +1,5 @@
+import sys
+
 import pytest
 
 from bling_api_v3_auth.config import BlingConfig, storage_from_env
@@ -75,3 +77,15 @@ def test_storage_from_env(tmp_path):
     assert isinstance(redis_storage, RedisTokenStorage)
     with pytest.raises(BlingConfigError):
         storage_from_env(environ={"BLING_TOKEN_STORAGE": "s3"})
+
+
+@pytest.mark.parametrize(
+    "redis_env",
+    [{}, {"BLING_REDIS_URL": "redis://localhost:6379/0"}, {"REDIS_HOST_IP": "localhost"}],
+    ids=["default-url", "explicit-url", "legacy-host"],
+)
+def test_redis_storage_missing_extra_is_config_error(monkeypatch, redis_env):
+    monkeypatch.setitem(sys.modules, "redis", None)
+    with pytest.raises(BlingConfigError, match=r"bling-api-v3-auth\[redis\]") as error:
+        storage_from_env(environ={"BLING_TOKEN_STORAGE": "redis", **redis_env})
+    assert isinstance(error.value.__cause__, ModuleNotFoundError)

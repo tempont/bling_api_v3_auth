@@ -40,6 +40,7 @@ class BlingOAuthError(BlingApiError):
 class AuthorizationRequiredError(BlingApiError):
     """Raised when the user must (re)authorize the application in Bling.
 
-    This happens when there are no stored tokens yet, or when the stored refresh
-    token is expired, revoked or was already used (Bling rotates refresh tokens).
+    This happens when there are no stored tokens yet, the credentials file contains
+    malformed JSON, or the stored refresh token is expired, revoked or was already
+    used (Bling rotates refresh tokens).
     """
