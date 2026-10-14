@@ -39,6 +39,14 @@ Primeira versão publicada no PyPI como `bling-api-v3-auth`.
 - Redis passa a ser um extra opcional (`bling-api-v3-auth[redis]`) e guarda os tokens em
   uma única chave JSON.
 
+### Corrigido
+
+- Redis sem o extra opcional agora gera `BlingConfigError` com a instrução de
+  instalação, também ao usar `BLING_TOKEN_STORAGE=redis` com URL padrão ou explícita.
+- JSON de credenciais malformado agora gera `AuthorizationRequiredError`:
+  `bling-auth status` e `bling-auth token` exibem uma mensagem com o caminho do
+  arquivo e a instrução para autorizar novamente, sem traceback ou conteúdo dos tokens.
+
 ### Removido
 
 - Scripts em `app/` (`BlingApiTokenHandler`, `TokenStorage` estático, `main.py`) e os

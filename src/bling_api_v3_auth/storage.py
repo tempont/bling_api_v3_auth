@@ -17,6 +17,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from bling_api_v3_auth.exceptions import AuthorizationRequiredError, BlingConfigError
 from bling_api_v3_auth.models import TokenData
 
 if TYPE_CHECKING:
@@ -79,6 +80,8 @@ class JsonTokenStorage(TokenStorage):
 
     Writes are atomic (temporary file + ``os.replace``), so a crash in the middle of
     a write never leaves a truncated credentials file behind.
+    Loading malformed JSON raises ``AuthorizationRequiredError`` with instructions
+    to authorize again; the existing file is preserved.
 
     Args:
         path: File location. Defaults to ``~/.config/bling_api_v3_auth/credentials.json``.
@@ -94,7 +97,16 @@ class JsonTokenStorage(TokenStorage):
             return None
         if not raw.strip():
             return None
-        data: Any = json.loads(raw)
+        try:
+            data: Any = json.loads(raw)
+        try:
+            data: Any = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            msg = (
+                f"Invalid token JSON in Redis key {self.key!r}. "
+                "Authorize again with: bling-auth login"
+            )
+            raise AuthorizationRequiredError(msg) from exc
         if not isinstance(data, dict):
             return None
         return TokenData.from_dict(data)
@@ -142,12 +154,12 @@ class RedisTokenStorage(TokenStorage):
         if client is None:
             try:
                 import redis  # noqa: PLC0415
-            except ModuleNotFoundError as exc:  # pragma: no cover - depends on extras
+            except ModuleNotFoundError as exc:
                 msg = (
                     "Redis support is not installed. "
                     "Install it with: pip install 'bling-api-v3-auth[redis]'"
                 )
-                raise ModuleNotFoundError(msg) from exc
+                raise BlingConfigError(msg) from exc
             client = redis.Redis.from_url(url or "redis://localhost:6379/0")
         self.client = client
         self.key = key

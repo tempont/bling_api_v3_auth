@@ -185,7 +185,7 @@ def storage_from_env(
             return RedisTokenStorage(url=url, key=key)
         try:
             import redis  # noqa: PLC0415
-        except ModuleNotFoundError as exc:  # pragma: no cover - depends on extras
+        except ModuleNotFoundError as exc:
             msg = "Install Redis support with: pip install 'bling-api-v3-auth[redis]'"
             raise BlingConfigError(msg) from exc
         client = redis.Redis(
